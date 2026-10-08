@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>阅读笔记</title>
+<style>
+  :root{
+    --accent:#2f7d6d;
+    --accent-weak:rgba(47,125,109,.12);
+    --paper:#f6f3ec;
+    --card:#fffdf8;
+    --ink:#2b2926;
+    --ink-2:#5b564d;
+    --ink-3:#8a8375;
+    --line:#e4ddcd;
+    --line-2:#d5ccba;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font:15px/1.75 -apple-system,"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.serif{font-family:"Songti SC","STSong","Noto Serif CJK SC","Source Han Serif SC",serif;font-weight:700}
+  button{font:inherit;cursor:pointer}
+
+  /* ---------- 顶栏 ---------- */
+  .topbar{max-width:1120px;margin:0 auto;padding:22px 24px 10px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+  .brand{display:flex;gap:14px;align-items:flex-start}
+  .no-chip{background:var(--accent);color:#fff;border-radius:8px;padding:4px 9px;font-size:12px;letter-spacing:2px;margin-top:6px;white-space:nowrap}
+  .brand h1{margin:0;font-size:24px;letter-spacing:1px}
+  .brand .tag{margin:2px 0 0;color:var(--ink-2);font-size:13.5px}
+  .src-line{max-width:1120px;margin:0 auto;padding:0 24px 6px;color:var(--ink-3);font-size:12.5px}
+  .src-line b{color:var(--accent);font-weight:600}
+  .top-actions{display:flex;gap:8px;align-items:center;padding-top:6px}
+  .tbtn{background:var(--card);border:1px solid var(--line-2);border-radius:9px;padding:6px 13px;color:var(--ink-2);font-size:13px}
+  .tbtn:hover{border-color:var(--accent);color:var(--accent)}
+  .saved-tip{font-size:12px;color:var(--ink-3);opacity:0;transition:opacity .4s}
+  .saved-tip.show{opacity:1}
+
+  /* ---------- 布局 ---------- */
+  .layout{max-width:1120px;margin:8px auto 60px;padding:0 24px;display:grid;grid-template-columns:236px 1fr;gap:22px;align-items:start}
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr}
+    #stepper{position:static;flex-direction:row;overflow-x:auto;padding-bottom:4px}
+    #stepper .sbtn{min-width:190px}
+  }
+
+  /* ---------- 步骤导航 ---------- */
+  #stepper{display:flex;flex-direction:column;gap:6px;position:sticky;top:14px}
+  .sbtn{display:flex;gap:9px;align-items:baseline;text-align:left;background:transparent;border:1px solid transparent;border-radius:10px;padding:7px 10px;color:var(--ink-2);font-size:13.5px;line-height:1.45}
+  .sbtn:hover{background:var(--card)}
+  .sbtn .num{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid var(--line-2);color:var(--ink-3);font-size:11.5px;display:flex;align-items:center;justify-content:center;align-self:center;background:#fff}
+  .sbtn.cur{background:var(--card);border-color:var(--line-2);color:var(--ink);font-weight:600}
+  .sbtn.cur .num{border-color:var(--accent);color:var(--accent)}
+  .sbtn.done .num{background:var(--accent);border-color:var(--accent);color:#fff}
+  .sbtn.skipped .num{background:#cfc8b8;border-color:#cfc8b8;color:#fff}
+  .sbtn .sdel{color:var(--ink-3);font-size:11px;display:block}
+  .progress{margin:4px 2px 10px;font-size:12px;color:var(--ink-3)}
+
+  /* ---------- 主卡 ---------- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:30px 34px 26px;box-shadow:0 1px 0 rgba(0,0,0,.02)}
+  @media (max-width:640px){.card{padding:22px 18px}}
+  .kicker{color:var(--accent);font-size:12.5px;letter-spacing:1.5px;margin-bottom:6px}
+  .kicker .deliv{background:var(--accent-weak);border-radius:6px;padding:2px 8px;margin-left:8px;letter-spacing:0}
+  .card h2{margin:0 0 12px;font-size:22px;letter-spacing:.5px}
+  .goal{color:var(--ink-2);margin:0 0 18px}
+  .goal b{color:var(--ink)}
+
+  /* ---------- 字段 ---------- */
+  .field{margin-bottom:18px}
+  .field label{display:block;font-size:13px;color:var(--ink-2);margin-bottom:6px;font-weight:600}
+  .field .hint{font-weight:400;color:var(--ink-3);font-size:12px;margin-left:6px}
+  .fhint{color:var(--ink-3);font-size:12.5px;margin:6px 0 0}
+  input[type=text],textarea{width:100%;background:#fff;border:1px solid var(--line-2);border-radius:9px;padding:9px 11px;color:var(--ink);font:inherit;line-height:1.7;outline:none;resize:vertical}
+  input[type=text]:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+  textarea{min-height:74px}
+
+  /* 动态列表（list / chipslist）：编号行 + × + ＋添加 */
+  .list-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+  .list-row{display:flex;gap:8px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .list-row .idx{flex:0 0 auto;color:var(--ink-3);font-size:12.5px;padding-top:7px;min-width:18px;text-align:right}
+  .list-row .grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+  .list-row textarea{border:none;border-bottom:1px dashed var(--line-2);border-radius:0;min-height:0;padding:4px 2px;background:transparent;box-shadow:none}
+  .list-row textarea:focus{border-bottom-color:var(--accent);box-shadow:none}
+  .list-row input[type=text]{border:none;border-bottom:1px dashed var(--line-2);border-radius:0;padding:4px 2px;background:transparent;box-shadow:none}
+  .list-row input[type=text]:focus{border-bottom-color:var(--accent);box-shadow:none}
+  .row-remove{flex:0 0 26px;background:none;border:none;color:var(--ink-3);font-size:16px;padding:4px 0;line-height:1.4}
+  .row-remove:hover{color:#b0473b}
+  .list-add{background:none;border:1px dashed var(--line-2);border-radius:8px;color:var(--ink-3);padding:5px 14px;font-size:13px}
+  .list-add:hover{color:var(--accent);border-color:var(--accent)}
+  .list-empty{color:var(--ink-3);font-size:13px;padding:6px 2px}
+  .row-chips{display:flex;flex-wrap:wrap;gap:6px}
+  .row-chip{background:#fff;border:1px solid var(--line-2);border-radius:999px;padding:2px 11px;font-size:12.5px;color:var(--ink-3)}
+  .row-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  /* 单选 chips */
+  .choice{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:#fff;border:1px solid var(--line-2);border-radius:999px;padding:5px 14px;font-size:13.5px;color:var(--ink-2)}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  /* 分组卡片（cards）：每组一张卡，卡头名称 + 删除，卡内子字段 */
+  .cards{display:flex;flex-direction:column;gap:12px;margin-bottom:8px}
+  .gcard{border:1px solid var(--line-2);border-radius:12px;background:#fff;overflow:hidden}
+  .gcard-head{display:flex;gap:8px;align-items:center;background:var(--accent-weak);padding:8px 12px;border-bottom:1px solid var(--line)}
+  .gcard-head .gi{flex:0 0 auto;color:var(--accent);font-weight:700;font-size:12.5px}
+  .gcard-head input[type=text]{border:none;background:transparent;font-weight:600;padding:2px 4px;box-shadow:none;border-bottom:1px dashed transparent;border-radius:0}
+  .gcard-head input[type=text]:focus{border-bottom-color:var(--accent);box-shadow:none}
+  .gcard-head input[type=text]::placeholder{font-weight:400}
+  .gcard-head .row-remove{margin-left:auto}
+  .gcard-body{padding:12px 14px 4px}
+  .gcard-body .field{margin-bottom:12px}
+  .gcard-body .field label{font-size:12.5px}
+  .gcard-body textarea{min-height:60px}
+
+  /* 联动评定（assess）：每个来源条目自动生成一块 */
+  .as-block{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px 14px;margin-bottom:10px}
+  .as-item{display:flex;gap:8px;align-items:baseline;font-weight:600;font-size:14px;margin-bottom:8px}
+  .as-item .idx{color:var(--accent);flex:0 0 auto}
+  .as-body{display:flex;flex-direction:column;gap:10px}
+  .as-body .field{margin-bottom:0}
+  .as-body .field label{font-size:12.5px}
+  .as-body textarea{min-height:56px}
+
+  /* 表格 rows（保留） */
+  .rows{width:100%;border-collapse:collapse}
+  .rows th{font-size:12px;color:var(--ink-3);text-align:left;font-weight:600;padding:0 8px 6px 0}
+  .rows td{padding:0 8px 8px 0;vertical-align:top}
+  .rows input[type=text]{min-width:90px}
+  .rows .rowdel{background:none;border:none;color:var(--ink-3);font-size:15px;padding:6px 4px}
+  .rows .rowdel:hover{color:#b0473b}
+  .addrow{background:none;border:1px dashed var(--line-2);border-radius:8px;color:var(--ink-3);padding:5px 14px;font-size:13px}
+  .addrow:hover{color:var(--accent);border-color:var(--accent)}
+
+  /* 半栏 */
+  .half-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:700px){.half-row{grid-template-columns:1fr}}
+
+  /* ---------- 原文引用 ---------- */
+  details.quote{margin:20px 0 6px;background:#f4efe3;border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:10px 14px}
+  details.quote summary{cursor:pointer;color:var(--ink-2);font-size:12.5px;letter-spacing:1px}
+  details.quote p{margin:8px 0 2px;font-family:"Songti SC","STSong",serif;color:#4a463d;font-size:14.5px}
+  details.quote .from{display:block;margin-top:4px;font-size:12px;color:var(--ink-3);font-family:-apple-system,"PingFang SC",sans-serif}
+
+  /* 前步回答带出（如问题三引出问题一的主题） */
+  .echoprev{margin:0 0 14px;background:#f4efe3;border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:10px 14px;font-size:14px;color:#4a463d}
+
+  /* ---------- 按钮 ---------- */
+  .nav{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+  .btn{background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:10px;padding:9px 22px;font-size:14.5px;letter-spacing:1px}
+  .btn:hover{filter:brightness(1.06)}
+  .btn.ghost{background:transparent;color:var(--ink-2);border-color:var(--line-2)}
+  .btn.ghost:hover{color:var(--accent);border-color:var(--accent);filter:none}
+  .skip-note{align-self:center;color:var(--ink-3);font-size:12.5px}
+
+  /* ---------- 欢迎 / 汇总 ---------- */
+  .lead{font-size:15.5px;color:var(--ink-2)}
+  .points{margin:14px 0 20px;padding:0;list-style:none}
+  .points li{padding:7px 0 7px 22px;position:relative;color:var(--ink-2);border-bottom:1px dashed var(--line)}
+  .points li:last-child{border-bottom:none}
+  .points li:before{content:"·";position:absolute;left:6px;color:var(--accent);font-weight:700;font-size:18px;line-height:1.4}
+  #mdview{background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px 26px;overflow:auto;max-height:60vh;font-size:14px;line-height:1.9}
+  #mdview h1{font-size:20px;margin:.2em 0 .6em}
+  #mdview h2{font-size:16.5px;margin:1.4em 0 .5em;padding-bottom:4px;border-bottom:1px solid var(--line)}
+  #mdview ul{margin:.3em 0;padding-left:1.4em}
+  #mdview ul ul{margin:.1em 0}
+  #mdview li{margin:2px 0}
+  #mdview p{margin:.5em 0}
+  .sum-note{color:var(--ink-3);font-size:12.5px;margin-top:14px}
+
+  /* ---------- 抽屉 ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(40,36,28,.35);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+  .overlay.show{opacity:1;pointer-events:auto}
+  .panel{position:fixed;top:0;right:-420px;width:400px;max-width:92vw;height:100%;background:var(--card);border-left:1px solid var(--line);z-index:50;transition:right .25s;display:flex;flex-direction:column}
+  .panel.show{right:0}
+  .panel .phead{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .panel .phead h3{margin:0;font-size:17px}
+  .panel .pbody{overflow:auto;padding:16px 20px;flex:1}
+  .pclose{background:none;border:none;font-size:20px;color:var(--ink-3)}
+  .arch-item{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+  .arch-item .t{font-weight:600;font-size:14px}
+  .arch-item .d{color:var(--ink-3);font-size:12px;margin:2px 0 8px}
+  .arch-item .ops{display:flex;gap:8px}
+  .mini{background:#fff;border:1px solid var(--line-2);border-radius:7px;padding:3px 10px;font-size:12px;color:var(--ink-2)}
+  .mini:hover{color:var(--accent);border-color:var(--accent)}
+  .mini.danger:hover{color:#a3452f;border-color:#a3452f}
+  .tool-sec{margin-bottom:18px}
+  .tool-sec h4{margin:0 0 6px;font-size:14px;color:var(--accent)}
+  .tool-sec p,.tool-sec ul{margin:0;color:var(--ink-2);font-size:13.5px}
+  .tool-sec ul{padding-left:1.3em}
+
+  .foot{max-width:1120px;margin:0 auto;padding:0 24px 40px;color:var(--ink-3);font-size:12px}
+  .hidden{display:none!important}
+  .nostorage{max-width:1120px;margin:10px auto 0;padding:8px 24px;color:#a3452f;font-size:12.5px}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="no-chip" id="prodNo"></span>
+    <div>
+      <h1 id="prodName"></h1>
+      <p class="tag" id="prodTag"></p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <span class="saved-tip" id="savedTip">已自动保存</span>
+    <button class="tbtn" id="btnTools">速查卡</button>
+    <button class="tbtn" id="btnNotes">我的笔记</button>
+    <button class="tbtn" id="btnRestart">重新开始</button>
+  </div>
+</header>
+<div class="src-line">依据 · <b id="prodSrc"></b> · 《如何阅读一本书》艾德勒 &amp; 范多伦（郝明义 / 朱衣 译，商务印书馆）</div>
+<div class="nostorage hidden" id="noStorage">提示：当前浏览器环境无法保存数据，笔记在刷新后将丢失。建议用 Chrome / Safari 直接打开本文件，或通过本地服务器访问。</div>
+
+<main class="layout">
+  <div>
+    <div class="progress" id="progress"></div>
+    <nav id="stepper"></nav>
+  </div>
+  <section class="card" id="stage"></section>
+</main>
+
+<footer class="foot" id="foot"></footer>
+
+<div class="overlay" id="overlay"></div>
+<aside class="panel" id="notesPanel">
+  <div class="phead"><h3>我的笔记</h3><button class="pclose" data-close="1">✕</button></div>
+  <div class="pbody" id="notesBody"></div>
+</aside>
+<aside class="panel" id="toolsPanel">
+  <div class="phead"><h3>速查卡</h3><button class="pclose" data-close="1">✕</button></div>
+  <div class="pbody" id="toolsBody"></div>
+</aside>
+
+<script>window.PRODUCT={"pid":"zhuti","no":"产品四","name":"主题阅读","shortName":"多书对话","tagline":"就一个问题，读很多本书，让作者们彼此对话","src":"第二十章「阅读的第四个层次：主题阅读」","accent":"#7a3b5e","accentWeak":"rgba(122,59,94,.12)","titleFields":[{"s":0,"f":"issue"}],"titleWrap":false,"introQuote":{"text":"借助他所阅读的书籍，主题阅读者要能够架构出一个可能在哪一本书里都没提过的主题分析。……主题阅读是最主动、也最花力气的一种阅读。","from":"第二章「阅读的层次」"},"welcome":{"title":"读的不是书，是一个问题","lead":"主题阅读是最高层次的阅读：就同一个问题读很多本书，让作者们隔空对话，最后由你搭出一台他们都没搭过的戏。书目、相关章节、中立词汇、各家立场，都按书、按条建卡添加；你的问题清单会自动流进议题界定与分析讨论。","points":["两个阶段：先「观察研究范围」（拟书目、做筛选），再进入五个正式步骤。","检视阅读是你全程的主力工具：筛书目、找相关章节，全靠它（用产品一摸底最快）。","只有一条纪律：面面俱到，不预设立场——这叫「辩证的客观」。","议题本身会跟着阅读生长：任何一步都可以回头修订，汇总页会自动跟上。"],"startLabel":"开始搭台","fields":[{"k":"issue","type":"text","label":"我要研究的议题（先写一版，随时改）","ph":"例：读同一本书，为什么理解程度差别巨大？"}]},"steps":[{"phase":"起点","title":"说清你的问题","deliver":"议题陈述","goal":"主题阅读有个矛盾：你得先知道该读什么书，可只有读过之后才知道该读什么。破法是：先给议题一个模糊的版本，允许它在阅读中变清晰。写下你现在的说法。","fields":[{"k":"sy_issue","type":"text","label":"我的议题（当前版本）","ph":"例：什么样的阅读方式能真正改变理解力"},{"k":"sy_why","type":"long","label":"我为什么关心它（可不填）","ph":"例：为了带团队做共读，需要一个说得清的标准"}],"quote":{"text":"虽然这个层次的阅读被定义为就同一个主题阅读两种以上的书……但是换个角度来说，这个主题也是跟着阅读走的，而不是事前就能定出来的。","from":"第二十章"}},{"phase":"准备阶段 · 观察研究范围","title":"拟一份试验性书目","deliver":"候选书目","goal":"尽可能多地收集候选书：图书馆目录、专家的建议、你看过的书里的书目索引、主题工具书（如 Syntopicon）。此刻只管收集，不挑剔——宁多勿漏。一本书一行。","fields":[{"k":"s2_books","type":"rows","addLabel":"添加一本书","cols":[{"label":"书名","ph":"例：《如何阅读一本书》"},{"label":"作者","ph":"例：艾德勒"},{"label":"从哪里听说它","ph":"例：某书参考文献 / 老师推荐"}]}],"quote":{"text":"针对你要研究的主题，设计一份试验性的书目。你可以参考图书馆目录、专家的建议与书中的书目索引。","from":"第二十章 · 准备阶段"}},{"phase":"准备阶段 · 观察研究范围","title":"用检视阅读筛选书目","deliver":"相关书目","goal":"对书目上每一本做一次检视阅读（用产品一最快）。你在上一步收集的书已经自动列在下面了——逐本判定：相关 / 待定 / 排除，附一句话理由。筛完如果发现议题变了，回到第一步改。","fields":[{"k":"s3_verdicts","type":"assess","source":"s2_books","srcType":"rows","label":"逐本判定","emptyHint":"先回到上一步把候选书目加进来，这里会自动逐本生成判定。","itemFields":[{"k":"v","type":"choice","label":"判定","opts":["相关","待定","排除"]},{"k":"why","type":"text","label":"一句话理由","ph":"例：第 20 章正面回答了我的问题"}]},{"k":"s3_shift","type":"long","label":"筛完之后，我对议题的新理解","ph":"例：关键词从「读书方法」缩小到「理解力的增量」"}],"quote":{"text":"浏览这份书目上所有的书，确定哪些与你的主题相关，并就你的主题建立起清楚的概念。……在开始做分析阅读之前先检视一遍——我们不相信任何读者能做到把这两件事一并进行。","from":"第二十章 · 检视阅读的角色"}},{"phase":"主题阅读 · 五步","title":"步骤一：找到相关的章节","deliver":"章节地图","goal":"对入选的书整体检视一遍，标出与议题最相关的章节。一本入选的书建一张卡：书名 + 相关章节（有几章加几条，一章一条）。记住：在这里，你和你的问题才是主角——是书在服务你，不是你在服务书。","fields":[{"k":"s4_map","type":"cards","label":"相关章节（按书建卡）","namePh":"书名","addLabel":"添加一本书","emptyHint":"点下方按钮，把每本相关书籍建成一张卡。","cardFields":[{"k":"chs","type":"list","label":"相关章节","itemPh":"例：第 20 章 —— 给出「层次递进」的解释框架","addLabel":"添加一处相关章节","emptyHint":"点下方按钮，把这本书里与议题相关的章节一条条加进来。"}]}],"quote":{"text":"在主题阅读中，你及你关心的主题才是基本的重点，而不是你阅读的书。……是书在服务你，而不是你在服务书。","from":"第二十章 · 步骤一"}},{"phase":"主题阅读 · 五步","title":"步骤二：建立一套中立词汇","deliver":"中立词汇表","goal":"不同作者用不同的字，说不同的事——由你来造一套自己的词汇，把各家说法「翻译」进来：带引作者与你达成共识。一个中立词建一张卡，把它吸收的各家原用词一条条列进去。","fields":[{"k":"s5_terms","type":"cards","label":"中立词汇（按词建卡）","namePh":"统一的中立词，例：理解力增量","addLabel":"添加一个中立词","emptyHint":"点下方按钮，为每个关键概念建一张中立词卡。","cardFields":[{"k":"srcs","type":"list","label":"各作者的原用词","itemPh":"例：艾德勒「理解力的增进」（《如何阅读一本书》）","addLabel":"添加一条来源","emptyHint":"点下方按钮，把用不同说法表达这个概念的作者加进来。"}]}],"quote":{"text":"根据主题创造出一套中立的词汇，带引作者与你达成共识——无论作者是否实际用到这些词汇，所有的作者，或至少绝大部分的作者都可以用这套词汇来诠释。","from":"第二十章 · 步骤二"}},{"phase":"主题阅读 · 五步","title":"步骤三：列出要问的问题","deliver":"问题序列","goal":"建立一串中立的问题，让作者们来回答。常见的排序：① 这现象存在吗？特质是什么？② 它是如何被发现的、如何表现？③ 它造成什么影响？这份清单会自动流进后面两步（议题界定、分析讨论）。","fields":[{"k":"s6_questions","type":"list","label":"我的问题（按顺序排）","itemPh":"例：1. 理解力的差异是真实存在的吗？","addLabel":"添加一个问题","emptyHint":"点下方按钮，把你要问的问题按顺序加进来。","note":"有的作者对某个问题可能沉默——那也是答案的一部分，下一部会记。"}],"quote":{"text":"建立一个中立的主旨，列出一连串的问题——无论作者是否明白谈过这些问题，所有的作者，或者至少大多数的作者都要能解读为针对这些问题提供了他们的回答。","from":"第二十章 · 步骤三"}},{"phase":"主题阅读 · 五步","title":"步骤四：界定议题","deliver":"议题图谱","goal":"当作者们对同一个问题给出不同的答案，议题就诞生了。你在上一步的问题已经自动列在下面——逐个问题记下各家的立场（引用更好，注明出处）。也要记录真正的共识：没有分歧的地方，不必硬造争议。","fields":[{"k":"s7_issues","type":"assess","source":"s6_questions","label":"逐个问题整理立场","emptyHint":"先回到上一步把问题清单建好，这里会自动逐题生成。","itemFields":[{"k":"pos","type":"list","label":"各家立场","itemPh":"例：艾德勒：分析阅读特别在追寻理解（第二十章）","addLabel":"添加一位作者的立场","emptyHint":"点下方按钮，把回答这个问题的作者逐个加进来。"},{"k":"note","type":"text","label":"共识 / 备注","ph":"例：各家对此无分歧，视为共识"}]}],"quote":{"text":"界定主要及次要的议题。然后将作者针对各个问题的不同意见整理陈列在各个议题之旁。","from":"第二十章 · 步骤四"}},{"phase":"主题阅读 · 五步","title":"步骤五：分析讨论","deliver":"主题报告","goal":"把问题与议题组织成一场讨论：你的问题清单已经自动列在下面——逐个问题写下讨论。保持对话式的疏离与客观：解读某位作者的观点时，并列引用他的原文，让读者能自己核对。最后可以写你自己的倾向，但要明确标注那是你的。","fields":[{"k":"s8_body","type":"assess","source":"s6_questions","label":"逐题讨论","emptyHint":"先回到第 6 步把问题清单建好，这里会自动逐题生成讨论区。","itemFields":[{"k":"d","type":"long","label":"这个问题的讨论（各家回答 → 争议在哪 → 关系）","ph":"按「问题 → 各家回答（附引用）→ 争议在哪」的顺序写"}]},{"k":"s8_mine","type":"long","label":"我暂得的结论（可选，标注：这是我的立场）","ph":"例：就现有这几本书看，多数作者同意方法可训练；这是我的倾向，不是定论"}],"quote":{"text":"分析这些讨论。这得把问题和议题按顺序排列，以求突显主题。……每当你要解读某个作家对一个议题的观点时，必须从他自己的文章中引一段话来并列。","from":"第二十章 · 步骤五"}}],"tools":[{"title":"主题工具书的三种用法","text":"如果你不知道从哪儿开始找书，可以借助主题工具书（如《西方世界的经典名著》的 Syntopicon）。","items":["启动阅读——从一个主题切入经典：先读各书的相关短章，再决定要不要整本读。","建议阅读——顺着兴趣长出新的主题，越读越广。","指导阅读——同一段文字出现在不同主题之下，多重诠释会训练你读出更丰富的含义。"]},{"title":"客观性提醒","text":"主题阅读追求的是「辩证的客观」：面面俱到，而自己并不预设立场。","items":["总结作者观点时，用你自己的中立词汇，不用他的原话下结论。","但总结旁边一定并列引用原文，避免扭曲，让读者能核对。","偏见会从「总结方式、强调与忽略的比重、答案的排列顺序」里溜进来——回头看一遍你的报告。"]},{"title":"这份笔记的学名","text":"主题阅读的笔记叫「辩证笔记」——就一个主题，把许多作者相关的陈述与疑问按顺序列出来。本工具的汇总页，就是它的雏形。"}],"summaryNote":"这份笔记是「辩证笔记」的雏形：它回答的不是某本书说了什么，而是许多作者如何共同回应你的问题——以及他们在哪里分歧。","footNote":"产品四 · 主题阅读多书对话工作台 · 依据《如何阅读一本书》第二十章。四个阅读产品相互独立，本产品的数据不会与其他产品互通。"};</script>
+<script>
+(function(){
+  var P = window.PRODUCT;
+  var STEP_COUNT = P.steps.length;
+  var IDX_SUMMARY = STEP_COUNT + 1;
+  var LS_CUR = 'hrab_' + P.pid + '_cur';
+  var LS_ARCH = 'hrab_' + P.pid + '_arch';
+  var state, saveTimer = null, canStore = true;
+
+  function esc(s){ return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ canStore=false; return null; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ canStore=false; return false; } }
+
+  function defaultState(){ return { cur:0, data:{}, created:Date.now() }; }
+  function loadState(){
+    var raw = lsGet(LS_CUR);
+    if(raw){ try{ state = JSON.parse(raw); }catch(e){ state = null; } }
+    if(!state || typeof state !== 'object' || !state.data) state = defaultState();
+    if(typeof state.cur !== 'number' || state.cur < 0 || state.cur > IDX_SUMMARY) state.cur = 0;
+  }
+  function flushSave(){ if(state){ lsSet(LS_CUR, JSON.stringify(state)); } }
+  function save(){
+    if(!state) return;
+    if(lsSet(LS_CUR, JSON.stringify(state))){
+      var t = document.getElementById('savedTip');
+      t.classList.add('show');
+      setTimeout(function(){ t.classList.remove('show'); }, 1200);
+    }
+  }
+  function queueSave(){ clearTimeout(saveTimer); saveTimer = setTimeout(save, 400); }
+
+  /* ================= 读写工具 ================= */
+  function getVal(k){ var v = state.data[k]; return v == null ? '' : v; }
+  function setVal(k, v){ state.data[k] = v; queueSave(); }
+  function getList(k){ var v = state.data[k]; return Array.isArray(v) ? v : []; }
+  function getObj(k){ var v = state.data[k]; return (v && !Array.isArray(v) && typeof v === 'object') ? v : {}; }
+  function getRows(k){ var v = state.data[k]; return (v && v.length) ? v : []; }
+
+  /* assess 来源条目：list → [{t}]；rows → 取第一个非空格 */
+  function assessItems(f){
+    if(f.srcType === 'rows'){
+      return getRows(f.source).map(function(r){
+        for(var i=0;i<r.length;i++){ if(String(r[i]||'').trim()) return { t: String(r[i]).trim() }; }
+        return { t:'' };
+      });
+    }
+    return getList(f.source).filter(function(x){ return String((x && x.t) || '').trim(); })
+      .map(function(x){ return { t: String(x.t).trim() }; });
+  }
+
+  function fieldFilled(f){
+    var v, i, j, kk;
+    if(f.type === 'rows'){
+      var rows = getRows(f.k);
+      for(i=0;i<rows.length;i++){ for(j=0;j<rows[i].length;j++){ if(String(rows[i][j]||'').trim()) return true; } }
+      return false;
+    }
+    if(f.type === 'list'){
+      return getList(f.k).some(function(x){ return String((x && x.t) || '').trim(); });
+    }
+    if(f.type === 'chipslist'){
+      return getList(f.k).some(function(x){ return x && (String(x.t||'').trim() || x.c || String(x.w||'').trim()); });
+    }
+    if(f.type === 'cards'){
+      var cards = getList(f.k);
+      for(i=0;i<cards.length;i++){
+        var c = cards[i] || {};
+        if(String(c.__name||'').trim()) return true;
+        for(var x=0;x<(f.cardFields||[]).length;x++){
+          var cf = f.cardFields[x]; var cv = c[cf.k];
+          if(cf.type === 'list' || cf.type === 'chipslist'){
+            if(Array.isArray(cv) && cv.some(function(y){ return y && (String(y.t||'').trim() || y.c || String(y.w||'').trim()); })) return true;
+          } else if(String(cv==null?'':cv).trim()) return true;
+        }
+      }
+      return false;
+    }
+    if(f.type === 'assess'){
+      var o = getObj(f.k);
+      for(kk in o){
+        if(kk.indexOf('i') !== 0) continue;
+        var it = o[kk]; if(!it || typeof it !== 'object') continue;
+        for(var y=0;y<(f.itemFields||[]).length;y++){
+          var af = f.itemFields[y]; var av = it[af.k];
+          if(af.type === 'list'){
+            if(Array.isArray(av) && av.some(function(z){ return z && String(z.t||'').trim(); })) return true;
+          } else if(String(av==null?'':av).trim()) return true;
+        }
+      }
+      return false;
+    }
+    v = getVal(f.k);
+    return String(v).trim() !== '';
+  }
+
+  function stepFields(i){
+    if(i === 0) return P.welcome.fields || [];
+    if(i <= STEP_COUNT) return P.steps[i-1].fields || [];
+    return [];
+  }
+  function isOptional(i){ return i >= 1 && i <= STEP_COUNT && !!P.steps[i-1].optional; }
+  function isSkipped(i){ return !!state.data['__skip' + i]; }
+  function stepStatus(i){
+    var fs = stepFields(i), any = false, all = fs.length > 0;
+    for(var x=0;x<fs.length;x++){
+      if(fieldFilled(fs[x])) any = true; else all = false;
+    }
+    if(isSkipped(i)) return 'skipped';
+    if(all) return 'done';
+    if(any) return 'partial';
+    return 'todo';
+  }
+  function doneCount(){
+    var n = 0;
+    for(var i=1;i<=STEP_COUNT;i++){ var s = stepStatus(i); if(s==='done'||s==='skipped') n++; }
+    return n;
+  }
+  function noteTitle(){
+    var tfs = P.titleFields || [];
+    for(var i=0;i<tfs.length;i++){
+      var v = String(getVal(tfs[i].f)).trim();
+      if(v) return v;
+    }
+    return '未命名笔记';
+  }
+
+  /* ================= 渲染：导航 ================= */
+  function renderStepper(){
+    var html = [];
+    html.push('<button class="sbtn' + (state.cur===0?' cur':'') + '" data-go="0"><span class="num">始</span><span>开始' + '<span class="sdel">' + esc(P.welcome.title) + '</span></span></button>');
+    for(var i=1;i<=STEP_COUNT;i++){
+      var st = P.steps[i-1], status = stepStatus(i), cls = status==='done'?' done':(status==='skipped'?' skipped':'');
+      html.push('<button class="sbtn' + (state.cur===i?' cur':'') + cls + '" data-go="' + i + '"><span class="num">' + i + '</span><span>' + esc(st.deliver) + '<span class="sdel">' + esc(st.title) + '</span></span></button>');
+    }
+    html.push('<button class="sbtn' + (state.cur===IDX_SUMMARY?' cur':'') + '" data-go="' + IDX_SUMMARY + '"><span class="num">总</span><span>笔记汇总<span class="sdel">导出 Markdown</span></span></button>');
+    document.getElementById('stepper').innerHTML = html.join('');
+    document.getElementById('progress').textContent = '已完成 ' + doneCount() + ' / ' + STEP_COUNT + ' 步 · 每步一份产物';
+  }
+
+  /* ================= 渲染：字段 ================= */
+  var rowRemoveBtn = '<button type="button" class="row-remove" title="删除本条">✕</button>';
+
+  function fieldHead(f){
+    var h = '';
+    if(f.label) h += '<label>' + esc(f.label) + (f.hint ? '<span class="hint">' + esc(f.hint) + '</span>' : '') + '</label>';
+    return h;
+  }
+
+  /* list：一行一条（可加可删） */
+  function renderList(f){
+    var rows = getList(f.k);
+    var h = '<div class="list-rows">';
+    if(!rows.length && f.emptyHint) h += '<div class="list-empty">' + esc(f.emptyHint) + '</div>';
+    for(var i=0;i<rows.length;i++){
+      h += '<div class="list-row"><span class="idx">' + (i+1) + '.</span>' +
+        '<div class="grow"><textarea rows="1" data-lk="' + f.k + '" data-ri="' + i + '" data-rk="t" placeholder="' + esc(f.itemPh || '') + '">' + esc((rows[i]&&rows[i].t)||'') + '</textarea></div>' +
+        rowRemoveBtn + '</div>';
+    }
+    h += '</div><button type="button" class="list-add" data-addrow="' + f.k + '">＋ ' + esc(f.addLabel || '添加一条') + '</button>';
+    if(f.note) h += '<p class="fhint">' + esc(f.note) + '</p>';
+    return h;
+  }
+
+  /* chipslist：一行 = 内容 + 行内标签 +（可选）补充说明 */
+  function renderChipsList(f){
+    var rows = getList(f.k);
+    var chips = f.chips || [];
+    var h = '<div class="list-rows">';
+    if(!rows.length && f.emptyHint) h += '<div class="list-empty">' + esc(f.emptyHint) + '</div>';
+    for(var i=0;i<rows.length;i++){
+      var r = rows[i] || {};
+      h += '<div class="list-row"><span class="idx">' + (i+1) + '.</span><div class="grow">' +
+        '<textarea rows="1" data-lk="' + f.k + '" data-ri="' + i + '" data-rk="t" placeholder="' + esc(f.itemPh || '') + '">' + esc(r.t||'') + '</textarea>' +
+        '<div class="row-chips">';
+      for(var c=0;c<chips.length;c++){
+        h += '<span class="row-chip' + (r.c===chips[c][0]?' on':'') + '" data-lk="' + f.k + '" data-ri="' + i + '" data-chipv="' + esc(chips[c][0]) + '">' + esc(chips[c][1]) + '</span>';
+      }
+      h += '</div>';
+      if(f.extra) h += '<input type="text" data-lk="' + f.k + '" data-ri="' + i + '" data-rk="w" placeholder="' + esc(f.extraPh || '') + '" value="' + esc(r.w||'') + '">';
+      h += '</div>' + rowRemoveBtn + '</div>';
+    }
+    h += '</div><button type="button" class="list-add" data-addrow="' + f.k + '">＋ ' + esc(f.addLabel || '添加一条') + '</button>';
+    if(f.note) h += '<p class="fhint">' + esc(f.note) + '</p>';
+    return h;
+  }
+
+  /* 卡片字段（cards 内部 / assess 条目内部共用）：支持 text/long/choice/list/chipslist */
+  function renderSubField(sf, kind, ownerKey, ownerIdx, value){
+    var attr = kind === 'card'
+      ? ' data-cards="' + ownerKey + '" data-ci="' + ownerIdx + '" data-ck="' + sf.k + '"'
+      : ' data-as="' + ownerKey + '" data-i="' + ownerIdx + '" data-ik="' + sf.k + '"';
+    if(sf.type === 'text'){
+      return '<input type="text"' + attr + ' value="' + esc(value==null?'':value) + '" placeholder="' + esc(sf.ph || '') + '">';
+    }
+    if(sf.type === 'long'){
+      return '<textarea rows="2"' + attr + ' placeholder="' + esc(sf.ph || '') + '">' + esc(value==null?'':value) + '</textarea>';
+    }
+    if(sf.type === 'choice'){
+      var h = '<div class="choice"' + attr + '>';
+      var opts = sf.opts || [];
+      for(var i=0;i<opts.length;i++){
+        h += '<button type="button" class="chip' + (value===opts[i]?' on':'') + '" data-v="' + esc(opts[i]) + '">' + esc(opts[i]) + '</button>';
+      }
+      return h + '</div>';
+    }
+    if(sf.type === 'list'){
+      var rows = Array.isArray(value) ? value : [];
+      var out = '<div class="list-rows">';
+      if(!rows.length && sf.emptyHint) out += '<div class="list-empty">' + esc(sf.emptyHint) + '</div>';
+      for(var r=0;r<rows.length;r++){
+        out += '<div class="list-row"><span class="idx">' + (r+1) + '.</span>' +
+          '<div class="grow"><textarea rows="1"' + attr + ' data-ri="' + r + '" data-rk="t" placeholder="' + esc(sf.itemPh || '') + '">' + esc((rows[r]&&rows[r].t)||'') + '</textarea></div>' +
+          rowRemoveBtn + '</div>';
+      }
+      out += '</div><button type="button" class="list-add" data-subadd="1"' + attr + '>＋ ' + esc(sf.addLabel || '添加一条') + '</button>';
+      return out;
+    }
+    if(sf.type === 'chipslist'){
+      var rows2 = Array.isArray(value) ? value : [];
+      var chips = sf.chips || [];
+      var out2 = '<div class="list-rows">';
+      if(!rows2.length && sf.emptyHint) out2 += '<div class="list-empty">' + esc(sf.emptyHint) + '</div>';
+      for(var r2=0;r2<rows2.length;r2++){
+        var rr = rows2[r2] || {};
+        out2 += '<div class="list-row"><span class="idx">' + (r2+1) + '.</span><div class="grow">' +
+          '<textarea rows="1"' + attr + ' data-ri="' + r2 + '" data-rk="t" placeholder="' + esc(sf.itemPh || '') + '">' + esc(rr.t||'') + '</textarea>' +
+          '<div class="row-chips">';
+        for(var c2=0;c2<chips.length;c2++){
+          out2 += '<span class="row-chip' + (rr.c===chips[c2][0]?' on':'') + '" data-chipv="' + esc(chips[c2][0]) + '">' + esc(chips[c2][1]) + '</span>';
+        }
+        out2 += '</div>';
+        if(sf.extra) out2 += '<input type="text"' + attr + ' data-ri="' + r2 + '" data-rk="w" placeholder="' + esc(sf.extraPh || '') + '" value="' + esc(rr.w||'') + '">';
+        out2 += '</div>' + rowRemoveBtn + '</div>';
+      }
+      out2 += '</div><button type="button" class="list-add" data-subadd="1"' + attr + '>＋ ' + esc(sf.addLabel || '添加一条') + '</button>';
+      return out2;
+    }
+    return '';
+  }
+
+  /* cards：分组卡片，每组 = 名称 + 子字段集（按需添加） */
+  function renderCards(f){
+    var cards = getList(f.k);
+    var h = '<div class="cards">';
+    if(!cards.length && f.emptyHint) h += '<div class="list-empty">' + esc(f.emptyHint) + '</div>';
+    for(var i=0;i<cards.length;i++){
+      var c = cards[i] || {};
+      h += '<div class="gcard"><div class="gcard-head"><span class="gi">' + (i+1) + '</span>' +
+        '<input type="text" data-cards="' + f.k + '" data-ci="' + i + '" data-ck="__name" value="' + esc(c.__name||'') + '" placeholder="' + esc(f.namePh || '这一组的名称') + '">' +
+        '<button type="button" class="row-remove" data-rmcard="' + f.k + '" data-ci="' + i + '" title="删除本组">✕</button></div>' +
+        '<div class="gcard-body">';
+      var cfs = f.cardFields || [];
+      for(var j=0;j<cfs.length;j++){
+        h += '<div class="field">' + fieldHead(cfs[j]) +
+          renderSubField(cfs[j], 'card', f.k, i, c[cfs[j].k]) +
+          '</div>';
+      }
+      h += '</div></div>';
+    }
+    h += '</div><button type="button" class="list-add" data-addcard="' + f.k + '">＋ ' + esc(f.addLabel || '添加一组') + '</button>';
+    if(f.note) h += '<p class="fhint">' + esc(f.note) + '</p>';
+    return h;
+  }
+
+  /* assess：从来源清单自动生成逐条评定 */
+  function renderAssess(f){
+    var items = assessItems(f);
+    var ans = getObj(f.k);
+    var h = '';
+    if(!items.length || !items.some(function(x){ return x.t; })){
+      h = '<div class="list-empty">' + esc(f.emptyHint || '请先在前面填写对应的清单，这里会自动逐条生成。') + '</div>';
+    } else {
+      h = '<div>';
+      var afs = f.itemFields || [];
+      for(var i=0;i<items.length;i++){
+        if(!items[i].t) continue;
+        var a = ans['i' + i] || {};
+        h += '<div class="as-block"><div class="as-item"><span class="idx">' + (i+1) + '.</span><span>' + esc(items[i].t) + '</span></div><div class="as-body">';
+        for(var j=0;j<afs.length;j++){
+          h += '<div class="field">' + fieldHead(afs[j]) +
+            renderSubField(afs[j], 'as', f.k, i, a[afs[j].k]) +
+            '</div>';
+        }
+        h += '</div></div>';
+      }
+      h += '</div>';
+      if(f.note) h += '<p class="fhint">' + esc(f.note) + '</p>';
+    }
+    return h;
+  }
+
+  function renderField(f){
+    var h = '<div class="field' + (f.half ? ' fhalf' : '') + '">';
+    if(f.type === 'rows'){
+      h += fieldHead(f);
+      var cols = f.cols || [];
+      var rows = getRows(f.k);
+      h += '<table class="rows" data-k="' + f.k + '"><thead><tr>';
+      for(var c=0;c<cols.length;c++){ h += '<th>' + esc(cols[c].label) + '</th>'; }
+      h += '<th style="width:26px"></th></tr></thead><tbody>';
+      if(!rows.length){ rows = [[]]; state.data[f.k] = rows; }
+      for(var r=0;r<rows.length;r++){
+        h += '<tr>';
+        for(var c2=0;c2<cols.length;c2++){
+          h += '<td><input type="text" data-r="' + r + '" data-c="' + c2 + '" value="' + esc(rows[r][c2]||'') + '" placeholder="' + esc(cols[c2].ph||'') + '"></td>';
+        }
+        h += '<td><button type="button" class="rowdel" data-r="' + r + '" title="删除此行">✕</button></td></tr>';
+      }
+      h += '</tbody></table><button type="button" class="addrow" data-add="' + f.k + '">＋ ' + esc(f.addLabel || '添加一行') + '</button>';
+    } else if(f.type === 'list'){
+      h += fieldHead(f) + renderList(f);
+    } else if(f.type === 'chipslist'){
+      h += fieldHead(f) + renderChipsList(f);
+    } else if(f.type === 'cards'){
+      h += fieldHead(f) + renderCards(f);
+    } else if(f.type === 'assess'){
+      h += fieldHead(f) + renderAssess(f);
+    } else {
+      h += fieldHead(f);
+      if(f.type === 'text'){
+        h += '<input type="text" data-k="' + f.k + '" value="' + esc(getVal(f.k)) + '" placeholder="' + esc(f.ph || '') + '">';
+      } else if(f.type === 'long'){
+        h += '<textarea data-k="' + f.k + '" placeholder="' + esc(f.ph || '') + '">' + esc(getVal(f.k)) + '</textarea>';
+      } else if(f.type === 'choice'){
+        h += '<div class="choice" data-k="' + f.k + '">';
+        var opts = f.opts || [];
+        var cur = getVal(f.k);
+        for(var i=0;i<opts.length;i++){
+          h += '<button type="button" class="chip' + (cur===opts[i]?' on':'') + '" data-v="' + esc(opts[i]) + '">' + esc(opts[i]) + '</button>';
+        }
+        h += '</div>';
+      }
+      if(f.note) h += '<p class="fhint">' + esc(f.note) + '</p>';
+    }
+    h += '</div>';
+    return h;
+  }
+
+  /* 渲染字段数组，处理 half 双列 */
+  function renderFields(fields){
+    var h = '', buf = [];
+    function flush(){ if(buf.length){ h += '<div class="half-row">' + buf.join('') + '</div>'; buf = []; } }
+    for(var i=0;i<fields.length;i++){
+      var f = fields[i];
+      if(f.half){ buf.push(renderField(f)); if(buf.length === 2) flush(); }
+      else { flush(); h += renderField(f); }
+    }
+    flush();
+    return h;
+  }
+
+  /* ================= 渲染：主区 ================= */
+  function render(){
+    renderStepper();
+    var el = document.getElementById('stage');
+    if(state.cur === 0) el.innerHTML = renderWelcome();
+    else if(state.cur <= STEP_COUNT) el.innerHTML = renderStep(state.cur);
+    else el.innerHTML = renderSummary();
+    growAll();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function renderWelcome(){
+    var w = P.welcome;
+    var h = '<div class="kicker">开始之前</div><h2>' + esc(w.title) + '</h2>';
+    h += '<p class="lead">' + esc(w.lead) + '</p><ul class="points">';
+    for(var i=0;i<w.points.length;i++){ h += '<li>' + esc(w.points[i]) + '</li>'; }
+    h += '</ul>';
+    h += renderFields(w.fields || []);
+    if(w.quote) h += '<details class="quote"><summary>书里这样说</summary><p>' + esc(w.quote.text) + '</p><span class="from">—— ' + esc(w.quote.from) + '</span></details>';
+    h += '<div class="nav"><button class="btn" data-act="go" data-to="1">' + esc(w.startLabel || '开始') + '</button></div>';
+    if(P.introQuote) h += '<details class="quote"><summary>书里这样说</summary><p>' + esc(P.introQuote.text) + '</p><span class="from">—— ' + esc(P.introQuote.from) + '</span></details>';
+    return h;
+  }
+
+  function renderStep(n){
+    var st = P.steps[n-1];
+    var h = '<div class="kicker">' + esc(st.phase || '') + ' · 第 ' + n + ' / ' + STEP_COUNT + ' 步<span class="deliv">产物：' + esc(st.deliver) + '</span></div>';
+    h += '<h2>' + esc(st.title) + '</h2><p class="goal">' + esc(st.goal) + '</p>';
+    if(isSkipped(n)) h += '<p class="skip-note" style="margin:-6px 0 14px">（此步已标记跳过，可继续填写，也可直接进入下一步）</p>';
+    if(st.echo){
+      var ev = String(getVal(st.echo.source) || '').trim();
+      if(ev) h += '<div class="echoprev"><b>' + esc(st.echo.label) + '：</b>' + esc(ev) + '</div>';
+    }
+    h += renderFields(st.fields || []);
+    if(st.quote) h += '<details class="quote"><summary>书里这样说</summary><p>' + esc(st.quote.text) + '</p><span class="from">—— ' + esc(st.quote.from) + '</span></details>';
+    h += '<div class="nav">';
+    h += '<button class="btn ghost" data-act="go" data-to="' + (n-1) + '">← 上一步</button>';
+    if(isOptional(n) && !isSkipped(n)) h += '<button class="btn ghost" data-act="skip" data-n="' + n + '">跳过此步</button>';
+    if(n < STEP_COUNT) h += '<button class="btn" data-act="go" data-to="' + (n+1) + '">下一步 →</button>';
+    else h += '<button class="btn" data-act="go" data-to="' + IDX_SUMMARY + '">生成笔记 →</button>';
+    h += '</div>';
+    return h;
+  }
+
+  /* ================= Markdown 组装 ================= */
+  function chipLabelOf(f, c){
+    var chips = f.chips || [];
+    for(var i=0;i<chips.length;i++){ if(chips[i][0] === c) return chips[i][1]; }
+    return c || '';
+  }
+  function listMd(rows, indent){
+    var out = [], pad = indent || '  ';
+    for(var i=0;i<rows.length;i++){
+      var t = String((rows[i] && rows[i].t) || '').trim();
+      if(!t) continue;
+      out.push(pad + '- ' + t);
+    }
+    return out;
+  }
+  function chipsListMd(rows, f, indent){
+    var out = [], pad = indent || '  ';
+    for(var i=0;i<rows.length;i++){
+      var r = rows[i] || {};
+      var t = String(r.t||'').trim(), c = chipLabelOf(f, r.c), w = String(r.w||'').trim();
+      if(!t && !c && !w) continue;
+      var line = pad + '- ' + (t || '（未填写）');
+      if(c) line += '〔' + c + '〕';
+      if(w) line += '——' + w;
+      out.push(line);
+    }
+    return out;
+  }
+  function cardsMd(cards, f){
+    var out = [];
+    for(var i=0;i<cards.length;i++){
+      var c = cards[i] || {};
+      var name = String(c.__name||'').trim();
+      var sub = [];
+      var cfs = f.cardFields || [];
+      for(var j=0;j<cfs.length;j++){
+        var cv = c[cfs[j].k];
+        if(cfs[j].type === 'list'){
+          var ls = listMd(Array.isArray(cv)?cv:[], '    ');
+          if(ls.length){ sub.push('    - ' + cfs[j].label + '：'); sub = sub.concat(ls); }
+        } else if(cfs[j].type === 'chipslist'){
+          var cs = chipsListMd(Array.isArray(cv)?cv:[], cfs[j], '    ');
+          if(cs.length){ sub.push('    - ' + cfs[j].label + '：'); sub = sub.concat(cs); }
+        } else {
+          var sv = String(cv==null?'':cv).trim();
+          if(sv) sub.push('    - ' + cfs[j].label + '：' + sv.split('\n').join(' / '));
+        }
+      }
+      if(name || sub.length){
+        out.push('  - **' + (name || '（未命名）') + '**');
+        out = out.concat(sub);
+      }
+    }
+    return out;
+  }
+  function assessMd(f){
+    var items = assessItems(f), ans = getObj(f.k), out = [];
+    var afs = f.itemFields || [];
+    for(var i=0;i<items.length;i++){
+      if(!items[i].t) continue;
+      var a = ans['i' + i] || {};
+      var sub = [];
+      for(var j=0;j<afs.length;j++){
+        var av = a[afs[j].k];
+        if(afs[j].type === 'list'){
+          var ls = listMd(Array.isArray(av)?av:[], '    ');
+          if(ls.length){ sub.push('    - ' + afs[j].label + '：'); sub = sub.concat(ls); }
+        } else {
+          var sv = String(av==null?'':av).trim();
+          if(sv) sub.push('    - ' + (afs[j].label || afs[j].md || afs[j].ph || '内容') + '：' + sv.split('\n').join(' / '));
+        }
+      }
+      if(sub.length){
+        out.push('  - ' + items[i].t);
+        out = out.concat(sub);
+      }
+    }
+    return out;
+  }
+  function valueToLines(f){
+    if(f.type === 'list'){
+      var ls = listMd(getList(f.k));
+      return ls.length ? ls : null;
+    }
+    if(f.type === 'chipslist'){
+      var cs = chipsListMd(getList(f.k), f);
+      return cs.length ? cs : null;
+    }
+    if(f.type === 'cards'){
+      var ccs = cardsMd(getList(f.k), f);
+      return ccs.length ? ccs : null;
+    }
+    if(f.type === 'assess'){
+      var as = assessMd(f);
+      return as.length ? as : null;
+    }
+    if(f.type === 'rows'){
+      var rows = getRows(f.k), cols = f.cols || [], out = [];
+      for(var i=0;i<rows.length;i++){
+        var parts = [];
+        for(var c=0;c<cols.length;c++){
+          var v = String(rows[i][c]||'').trim();
+          if(v) parts.push(cols[c].label + '：' + v);
+        }
+        if(parts.length) out.push('  - ' + parts.join('｜'));
+      }
+      return out.length ? out : null;
+    }
+    var v = String(getVal(f.k)).trim();
+    if(!v) return null;
+    if(f.type === 'choice') return ['  - ' + f.label + '：' + v];
+    var lines = v.split('\n');
+    var out2 = ['  - **' + f.label + '**：' + lines[0]];
+    for(var k=1;k<lines.length;k++){ if(lines[k].trim()) out2.push('    ' + lines[k]); }
+    return out2;
+  }
+  function buildMd(){
+    var title = noteTitle();
+    if(P.titleWrap) title = '《' + title + '》';
+    var lines = [];
+    lines.push('# ' + title + '· ' + P.name + '笔记');
+    lines.push('');
+    lines.push('- 产品：' + P.no + '「' + P.name + '」（' + P.tagline + '）');
+    lines.push('- 依据：《如何阅读一本书》' + P.src);
+    lines.push('- 记录时间：' + new Date().toLocaleDateString('zh-CN') + '（工具内自动记录）');
+    lines.push('');
+    var w = P.welcome, wfs = w.fields || [];
+    if(wfs.length){
+      lines.push('## 0. 基本信息与阅读意图');
+      var wAny = false;
+      for(var i=0;i<wfs.length;i++){
+        var wl = valueToLines(wfs[i]);
+        if(wl){ lines = lines.concat(wl); wAny = true; }
+      }
+      if(wAny) lines.push('');
+    }
+    for(var n=1;n<=STEP_COUNT;n++){
+      var st = P.steps[n-1];
+      var skipped = isSkipped(n);
+      lines.push('## ' + n + '. ' + st.deliver + '（' + st.title + '）' + (skipped ? '〔已跳过〕' : ''));
+      if(!skipped){
+        var fs = st.fields || [], wrote = false;
+        for(var j=0;j<fs.length;j++){
+          var fl = valueToLines(fs[j]);
+          if(fl){ lines = lines.concat(fl); wrote = true; }
+        }
+        if(!wrote) lines.push('（未填写）');
+      }
+      lines.push('');
+    }
+    lines.push('---');
+    lines.push('*' + P.summaryNote + '*');
+    return lines.join('\n');
+  }
+  function mdToHtml(md){
+    var escd = esc(md);
+    var lines = escd.split('\n'), out = [], stack = [];
+    function closeTo(level){
+      while(stack.length > level){ out.push('</ul>'); stack.pop(); }
+    }
+    function inline(s){ return s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>'); }
+    for(var i=0;i<lines.length;i++){
+      var L = lines[i];
+      var m = L.match(/^( *)- (.*)$/);
+      if(m){
+        var level = Math.floor(m[1].length / 2) + 1;
+        closeTo(level);
+        if(stack.length < level){ out.push('<ul>'); stack.push(level); }
+        out.push('<li>' + inline(m[2]) + '</li>');
+      }
+      else if(/^### /.test(L)){ closeTo(0); out.push('<h3>' + inline(L.slice(4)) + '</h3>'); }
+      else if(/^## /.test(L)){ closeTo(0); out.push('<h2>' + inline(L.slice(3)) + '</h2>'); }
+      else if(/^# /.test(L)){ closeTo(0); out.push('<h1>' + inline(L.slice(2)) + '</h1>'); }
+      else if(/^---$/.test(L.trim())){ closeTo(0); out.push('<hr>'); }
+      else if(/^\*.+\*$/.test(L.trim())){ closeTo(0); out.push('<p><em>' + inline(L.trim().slice(1,-1)) + '</em></p>'); }
+      else if(L.trim() === ''){ closeTo(0); }
+      else { closeTo(0); out.push('<p>' + inline(L) + '</p>'); }
+    }
+    closeTo(0);
+    return out.join('\n');
+  }
+  function renderSummary(){
+    var md = buildMd();
+    var h = '<div class="kicker">完成 · ' + P.name + '笔记</div><h2>' + (P.titleWrap ? '《' + esc(noteTitle()) + '》' : esc(noteTitle())) + '：一份' + esc(P.shortName) + '笔记</h2>';
+    h += '<p class="goal">下面是全部步骤产物的汇总。可以复制为 Markdown 粘进你的笔记库，或下载 / 打印存档。想修改任何一步，点左侧对应的产物名回去改，这里会自动更新。</p>';
+    h += '<div id="mdview">' + mdToHtml(md) + '</div>';
+    h += '<div class="nav">';
+    h += '<button class="btn" data-act="copy">复制 Markdown</button>';
+    h += '<button class="btn ghost" data-act="download">下载 .md 文件</button>';
+    h += '<button class="btn ghost" data-act="print">打印 / 存为 PDF</button>';
+    h += '<button class="btn ghost" data-act="archive">存入我的笔记</button>';
+    h += '<button class="btn ghost" data-act="go" data-to="' + STEP_COUNT + '">← 回上一步</button>';
+    h += '</div>';
+    h += '<p class="sum-note">' + esc(P.summaryNote) + '</p>';
+    return h;
+  }
+
+  /* ================= 导出 ================= */
+  function copyMd(){
+    var md = buildMd();
+    function fallback(){
+      var ta = document.createElement('textarea');
+      ta.value = md; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); toast('已复制到剪贴板'); }
+      catch(e){ toast('复制失败，请手动选择文本'); }
+      document.body.removeChild(ta);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(md).then(function(){ toast('已复制到剪贴板'); }, fallback);
+    } else fallback();
+  }
+  function downloadMd(){
+    var md = buildMd();
+    var name = P.name + '笔记-' + noteTitle().replace(/[\\/:*?"<>|]/g,'_') + '.md';
+    var blob = new Blob([md], {type:'text/markdown;charset=utf-8'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); document.body.removeChild(a); }, 200);
+  }
+  function printMd(){
+    var w = window.open('', '_blank');
+    if(!w){ toast('浏览器拦截了弹窗，请允许后重试'); return; }
+    var md = buildMd();
+    w.document.write('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>' + esc(noteTitle()) + '·' + esc(P.name) + '笔记</title><style>body{max-width:720px;margin:40px auto;padding:0 20px;font:15px/1.9 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#222}h1{font-size:22px}h2{font-size:17px;border-bottom:1px solid #ddd;padding-bottom:4px}li{margin:3px 0}ul ul{margin:2px 0}</style></head><body>' + mdToHtml(md) + '</body></html>');
+    w.document.close();
+    setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){} }, 300);
+  }
+  function toast(msg){
+    var t = document.getElementById('savedTip');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function(){ t.textContent = '已自动保存'; t.classList.remove('show'); }, 1600);
+  }
+
+  /* ================= 归档 ================= */
+  function readArch(){
+    var raw = lsGet(LS_ARCH);
+    if(!raw) return [];
+    try{ return JSON.parse(raw); }catch(e){ return []; }
+  }
+  function writeArch(a){ lsSet(LS_ARCH, JSON.stringify(a)); }
+  function hasContent(){
+    for(var k in state.data){
+      var v = state.data[k];
+      if(typeof v === 'string' && v.trim()) return true;
+      if(Array.isArray(v) && v.length) return true;
+      if(v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length) return true;
+    }
+    return false;
+  }
+  function archiveCurrent(){
+    if(!hasContent()) return false;
+    var a = readArch();
+    a.unshift({ id: Date.now(), title: noteTitle(), date: new Date().toLocaleDateString('zh-CN'), data: state.data });
+    writeArch(a);
+    return true;
+  }
+  function renderNotes(){
+    var a = readArch();
+    var body = document.getElementById('notesBody');
+    var h = '<p style="margin:0 0 14px;color:var(--ink-3);font-size:12.5px">当前正在编辑的笔记会一直自动保存；下面是已单独存档的历史笔记。</p>';
+    h += '<p><button class="mini" data-arch="0">把当前笔记存档 →</button></p><div style="height:10px"></div>';
+    if(!a.length) h += '<p style="color:var(--ink-3)">还没有存档笔记。</p>';
+    for(var i=0;i<a.length;i++){
+      h += '<div class="arch-item"><div class="t">' + esc(a[i].title) + '</div><div class="d">存档于 ' + esc(a[i].date) + '</div>';
+      h += '<div class="ops"><button class="mini" data-open="' + i + '">继续编辑</button><button class="mini" data-archexp="' + i + '">导出</button><button class="mini danger" data-archdel="' + i + '">删除</button></div></div>';
+    }
+    body.innerHTML = h;
+  }
+
+  /* ================= 事件 ================= */
+  function grow(ta){ ta.style.height = 'auto'; ta.style.height = Math.max(60, ta.scrollHeight) + 'px'; }
+  function growAll(){ var tas = document.querySelectorAll('#stage textarea'); for(var i=0;i<tas.length;i++) grow(tas[i]); }
+  function rerender(){ save(); render(); }
+
+  function bind(stage){
+    /* ---- 顶层简单值 ---- */
+    stage.addEventListener('input', function(e){
+      var t = e.target;
+      if(t.matches('textarea')) grow(t);
+      if(t.matches('input[data-k], textarea[data-k]')){
+        setVal(t.getAttribute('data-k'), t.value); return;
+      }
+      if(t.matches('.rows input')){
+        var tbl = t.closest('table.rows'), k = tbl.getAttribute('data-k');
+        var rows = getRows(k);
+        var r = parseInt(t.getAttribute('data-r'),10), c = parseInt(t.getAttribute('data-c'),10);
+        while(rows.length <= r) rows.push([]);
+        while(rows[r].length <= c) rows[r].push('');
+        rows[r][c] = t.value;
+        setVal(k, rows); return;
+      }
+      /* list / chipslist 行 */
+      if(t.matches('[data-lk][data-ri][data-rk]')){
+        var lk = t.getAttribute('data-lk');
+        var arr = getList(lk);
+        var ri = parseInt(t.getAttribute('data-ri'),10), rk = t.getAttribute('data-rk');
+        while(arr.length <= ri) arr.push({});
+        arr[ri] = arr[ri] || {};
+        arr[ri][rk] = t.value;
+        setVal(lk, arr); return;
+      }
+      /* cards 内子字段 */
+      if(t.matches('[data-cards][data-ci][data-ck]')){
+        var ck = t.getAttribute('data-cards');
+        var cards = getList(ck);
+        var ci = parseInt(t.getAttribute('data-ci'),10), cfk = t.getAttribute('data-ck');
+        while(cards.length <= ci) cards.push({});
+        cards[ci] = cards[ci] || {};
+        if(t.matches('[data-ri]')){
+          var arr2 = Array.isArray(cards[ci][cfk]) ? cards[ci][cfk] : [];
+          var ri2 = parseInt(t.getAttribute('data-ri'),10), rk2 = t.getAttribute('data-rk');
+          while(arr2.length <= ri2) arr2.push({});
+          arr2[ri2] = arr2[ri2] || {};
+          arr2[ri2][rk2] = t.value;
+          cards[ci][cfk] = arr2;
+        } else {
+          cards[ci][cfk] = t.value;
+        }
+        setVal(ck, cards); return;
+      }
+      /* assess 条目内子字段 */
+      if(t.matches('[data-as][data-i][data-ik]')){
+        var ak = t.getAttribute('data-as');
+        var obj = getObj(ak);
+        var ii = 'i' + t.getAttribute('data-i'), afk = t.getAttribute('data-ik');
+        obj[ii] = obj[ii] || {};
+        if(t.matches('[data-ri]')){
+          var arr3 = Array.isArray(obj[ii][afk]) ? obj[ii][afk] : [];
+          var ri3 = parseInt(t.getAttribute('data-ri'),10), rk3 = t.getAttribute('data-rk');
+          while(arr3.length <= ri3) arr3.push({});
+          arr3[ri3] = arr3[ri3] || {};
+          arr3[ri3][rk3] = t.value;
+          obj[ii][afk] = arr3;
+        } else {
+          obj[ii][afk] = t.value;
+        }
+        setVal(ak, obj); return;
+      }
+    });
+
+    stage.addEventListener('click', function(e){
+      var t = e.target;
+      /* 顶层 choice chip */
+      var chip = t.closest('.choice > .chip');
+      if(chip){
+        var box = chip.closest('.choice'), k = box.getAttribute('data-k');
+        if(k){
+          state.data[k] = chip.getAttribute('data-v');
+          var kids = box.querySelectorAll('.chip');
+          for(var i=0;i<kids.length;i++) kids[i].classList.toggle('on', kids[i] === chip);
+          queueSave(); return;
+        }
+      }
+      /* 行内 chip（chipslist 顶层） */
+      var rchip = t.closest('.row-chip[data-lk]');
+      if(rchip){
+        var lk = rchip.getAttribute('data-lk'), ri = parseInt(rchip.getAttribute('data-ri'),10);
+        var arr = getList(lk);
+        while(arr.length <= ri) arr.push({});
+        arr[ri] = arr[ri] || {};
+        var v = rchip.getAttribute('data-chipv');
+        arr[ri].c = (arr[ri].c === v) ? '' : v;
+        setVal(lk, arr); rerender(); return;
+      }
+      /* 行内 chip（cards 内） */
+      var cchip = t.closest('.row-chip[data-cards]');
+      if(cchip){
+        var ck = cchip.getAttribute('data-cards'), ci = parseInt(cchip.getAttribute('data-ci'),10);
+        var cfk = cchip.getAttribute('data-ck'), cri = parseInt(cchip.getAttribute('data-ri'),10);
+        var cards = getList(ck);
+        while(cards.length <= ci) cards.push({});
+        cards[ci] = cards[ci] || {};
+        var arrc = Array.isArray(cards[ci][cfk]) ? cards[ci][cfk] : [];
+        while(arrc.length <= cri) arrc.push({});
+        arrc[cri] = arrc[cri] || {};
+        var cv = cchip.getAttribute('data-chipv');
+        arrc[cri].c = (arrc[cri].c === cv) ? '' : cv;
+        cards[ci][cfk] = arrc;
+        setVal(ck, cards); rerender(); return;
+      }
+      /* 行内 chip（assess 内） */
+      var achip = t.closest('.row-chip[data-as]');
+      if(achip){
+        var ak = achip.getAttribute('data-as'), ai = 'i' + achip.getAttribute('data-i');
+        var afk2 = achip.getAttribute('data-ik'), ari = parseInt(achip.getAttribute('data-ri'),10);
+        var obj = getObj(ak);
+        obj[ai] = obj[ai] || {};
+        var arra = Array.isArray(obj[ai][afk2]) ? obj[ai][afk2] : [];
+        while(arra.length <= ari) arra.push({});
+        arra[ari] = arra[ari] || {};
+        var av = achip.getAttribute('data-chipv');
+        arra[ari].c = (arra[ari].c === av) ? '' : av;
+        obj[ai][afk2] = arra;
+        setVal(ak, obj); rerender(); return;
+      }
+      /* cards 内 choice */
+      var cchoice = t.closest('.choice[data-cards] > .chip');
+      if(cchoice){
+        var box2 = cchoice.closest('.choice');
+        var ck2 = box2.getAttribute('data-cards'), ci2 = parseInt(box2.getAttribute('data-ci'),10), cfk3 = box2.getAttribute('data-ck');
+        var cards2 = getList(ck2);
+        while(cards2.length <= ci2) cards2.push({});
+        cards2[ci2] = cards2[ci2] || {};
+        cards2[ci2][cfk3] = cchoice.getAttribute('data-v');
+        setVal(ck2, cards2); rerender(); return;
+      }
+      /* assess 内 choice */
+      var achoice = t.closest('.choice[data-as] > .chip');
+      if(achoice){
+        var box3 = achoice.closest('.choice');
+        var ak2 = box3.getAttribute('data-as'), ai2 = 'i' + box3.getAttribute('data-i'), afk3 = box3.getAttribute('data-ik');
+        var obj2 = getObj(ak2);
+        obj2[ai2] = obj2[ai2] || {};
+        obj2[ai2][afk3] = achoice.getAttribute('data-v');
+        setVal(ak2, obj2); rerender(); return;
+      }
+      /* rows：删行 / 加行 */
+      var del = t.closest('.rowdel');
+      if(del){
+        var tbl2 = del.closest('table.rows'), k2 = tbl2.getAttribute('data-k');
+        var rows2 = getRows(k2);
+        rows2.splice(parseInt(del.getAttribute('data-r'),10), 1);
+        if(!rows2.length) rows2.push([]);
+        setVal(k2, rows2); rerender(); return;
+      }
+      var add = t.closest('.addrow');
+      if(add){
+        var k3 = add.getAttribute('data-add');
+        var rows3 = getRows(k3);
+        rows3.push([]);
+        setVal(k3, rows3); rerender(); return;
+      }
+      /* list / chipslist：删行 */
+      var rmrow = t.closest('.list-row .row-remove');
+      if(rmrow){
+        var rowEl = rmrow.closest('.list-row');
+        var ta = rowEl.querySelector('[data-lk]');
+        if(ta){
+          var lk2 = ta.getAttribute('data-lk');
+          if(ta.hasAttribute('data-cards')){
+            var ck3 = ta.getAttribute('data-cards'), ci3 = parseInt(ta.getAttribute('data-ci'),10), cfk4 = ta.getAttribute('data-ck'), ri3 = parseInt(ta.getAttribute('data-ri'),10);
+            var cards3 = getList(ck3);
+            if(cards3[ci3] && Array.isArray(cards3[ci3][cfk4])){
+              cards3[ci3][cfk4].splice(ri3,1);
+              setVal(ck3, cards3); rerender();
+            }
+            return;
+          }
+          if(ta.hasAttribute('data-as')){
+            var ak3 = ta.getAttribute('data-as'), ai3 = 'i' + ta.getAttribute('data-i'), afk5 = ta.getAttribute('data-ik'), ri4 = parseInt(ta.getAttribute('data-ri'),10);
+            var obj3 = getObj(ak3);
+            if(obj3[ai3] && Array.isArray(obj3[ai3][afk5])){
+              obj3[ai3][afk5].splice(ri4,1);
+              setVal(ak3, obj3); rerender();
+            }
+            return;
+          }
+          var ri5 = parseInt(ta.getAttribute('data-ri'),10);
+          var arr4 = getList(lk2);
+          arr4.splice(ri5,1);
+          setVal(lk2, arr4); rerender(); return;
+        }
+      }
+      /* list / chipslist：加行 */
+      var addrow = t.closest('[data-addrow]');
+      if(addrow){
+        var lk3 = addrow.getAttribute('data-addrow');
+        var arr5 = getList(lk3);
+        arr5.push({});
+        setVal(lk3, arr5); rerender(); return;
+      }
+      /* cards 内 list：加行 */
+      var subadd = t.closest('[data-subadd]');
+      if(subadd){
+        if(subadd.hasAttribute('data-cards')){
+          var ck4 = subadd.getAttribute('data-cards'), ci4 = parseInt(subadd.getAttribute('data-ci'),10), cfk6 = subadd.getAttribute('data-ck');
+          var cards4 = getList(ck4);
+          while(cards4.length <= ci4) cards4.push({});
+          cards4[ci4] = cards4[ci4] || {};
+          var arr6 = Array.isArray(cards4[ci4][cfk6]) ? cards4[ci4][cfk6] : [];
+          arr6.push({});
+          cards4[ci4][cfk6] = arr6;
+          setVal(ck4, cards4); rerender(); return;
+        }
+        if(subadd.hasAttribute('data-as')){
+          var ak4 = subadd.getAttribute('data-as'), ai4 = 'i' + subadd.getAttribute('data-i'), afk7 = subadd.getAttribute('data-ik');
+          var obj4 = getObj(ak4);
+          obj4[ai4] = obj4[ai4] || {};
+          var arr7 = Array.isArray(obj4[ai4][afk7]) ? obj4[ai4][afk7] : [];
+          arr7.push({});
+          obj4[ai4][afk7] = arr7;
+          setVal(ak4, obj4); rerender(); return;
+        }
+      }
+      /* cards：删卡 / 加卡 */
+      var rmcard = t.closest('[data-rmcard]');
+      if(rmcard){
+        var ck5 = rmcard.getAttribute('data-rmcard');
+        var cards5 = getList(ck5);
+        cards5.splice(parseInt(rmcard.getAttribute('data-ci'),10), 1);
+        setVal(ck5, cards5); rerender(); return;
+      }
+      var addcard = t.closest('[data-addcard]');
+      if(addcard){
+        var ck6 = addcard.getAttribute('data-addcard');
+        var cards6 = getList(ck6);
+        cards6.push({});
+        setVal(ck6, cards6); rerender(); return;
+      }
+      /* 跳过 / 导航 / 汇总动作 */
+      var sbtn = t.closest('[data-act="skip"]');
+      if(sbtn){
+        var n = parseInt(sbtn.getAttribute('data-n'),10);
+        state.data['__skip' + n] = 1; save();
+        state.cur = Math.min(n + 1, IDX_SUMMARY); render(); return;
+      }
+      var go = t.closest('[data-act="go"], [data-go]');
+      if(go){
+        flushSave();
+        state.cur = parseInt(go.getAttribute('data-to') || go.getAttribute('data-go'), 10);
+        render(); return;
+      }
+      var act = t.closest('[data-act]');
+      if(act){
+        var a = act.getAttribute('data-act');
+        if(a === 'copy') copyMd();
+        else if(a === 'download') downloadMd();
+        else if(a === 'print') printMd();
+        else if(a === 'archive'){ archiveCurrent() ? toast('已存档，可在「我的笔记」中找到') : toast('当前还没有内容可存档'); }
+      }
+    });
+  }
+
+  /* 面板与顶栏 */
+  function openPanel(id){
+    document.getElementById(id).classList.add('show');
+    document.getElementById('overlay').classList.add('show');
+  }
+  function closePanels(){
+    document.getElementById('notesPanel').classList.remove('show');
+    document.getElementById('toolsPanel').classList.remove('show');
+    document.getElementById('overlay').classList.remove('show');
+  }
+  document.getElementById('overlay').addEventListener('click', closePanels);
+  document.getElementById('btnNotes').addEventListener('click', function(){ renderNotes(); openPanel('notesPanel'); });
+  document.getElementById('btnTools').addEventListener('click', function(){ openPanel('toolsPanel'); });
+  var panels = document.querySelectorAll('.panel');
+  for(var pi=0;pi<panels.length;pi++){
+    panels[pi].addEventListener('click', function(e){ if(e.target.closest('[data-close]')) closePanels(); });
+  }
+  document.getElementById('btnRestart').addEventListener('click', function(){
+    if(hasContent()){
+      if(!confirm('重新开始会先把当前笔记自动存入「我的笔记」，然后清空重新填写。继续吗？')) return;
+      archiveCurrent();
+    }
+    state = defaultState(); flushSave(); render();
+  });
+  document.getElementById('notesBody').addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    var a = readArch();
+    if(b.hasAttribute('data-arch')){
+      if(archiveCurrent()) { renderNotes(); toast('已存档'); } else toast('当前还没有内容可存档');
+    } else if(b.hasAttribute('data-open')){
+      var i = parseInt(b.getAttribute('data-open'),10);
+      if(a[i]){ state = { cur:0, data:a[i].data, created:Date.now() }; flushSave(); closePanels(); render(); }
+    } else if(b.hasAttribute('data-archexp')){
+      var j = parseInt(b.getAttribute('data-archexp'),10);
+      if(a[j]){
+        var saved = state; state = { data:a[j].data }; downloadMd(); state = saved;
+      }
+    } else if(b.hasAttribute('data-archdel')){
+      var k = parseInt(b.getAttribute('data-archdel'),10);
+      if(confirm('删除这份存档笔记？此操作不可恢复。')){ a.splice(k,1); writeArch(a); renderNotes(); }
+    }
+  });
+
+  window.addEventListener('beforeunload', flushSave);
+
+  /* ---------- 初始化 ---------- */
+  (function init(){
+    document.documentElement.style.setProperty('--accent', P.accent);
+    document.documentElement.style.setProperty('--accent-weak', P.accentWeak);
+    document.title = P.no + ' ' + P.name + ' · 阅读笔记';
+    document.getElementById('prodNo').textContent = P.no;
+    document.getElementById('prodName').textContent = P.name;
+    document.getElementById('prodTag').textContent = P.tagline;
+    document.getElementById('prodSrc').textContent = P.src;
+    document.getElementById('foot').textContent = P.footNote;
+    var tb = document.getElementById('toolsBody');
+    var th = '';
+    for(var i=0;i<(P.tools||[]).length;i++){
+      var sec = P.tools[i];
+      th += '<div class="tool-sec"><h4>' + esc(sec.title) + '</h4>';
+      if(sec.text) th += '<p>' + esc(sec.text) + '</p>';
+      if(sec.items){ th += '<ul>'; for(var j=0;j<sec.items.length;j++) th += '<li>' + esc(sec.items[j]) + '</li>'; th += '</ul>'; }
+      th += '</div>';
+    }
+    tb.innerHTML = th || '<p>暂无。</p>';
+    loadState();
+    bind(document.getElementById('stage'));
+    document.getElementById('stepper').addEventListener('click', function(e){
+      var go = e.target.closest('[data-go]');
+      if(go){ flushSave(); state.cur = parseInt(go.getAttribute('data-go'), 10); render(); }
+    });
+    if(!canStore) document.getElementById('noStorage').classList.remove('hidden');
+    render();
+  })();
+})();
+</script>
+</body>
+</html>
