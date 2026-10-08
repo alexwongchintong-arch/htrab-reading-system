@@ -688,12 +688,21 @@
       } else if(f.type === 'long'){
         h += '<textarea data-path="'+path+'" placeholder="'+esc(f.ph||'')+'">'+esc(getP(b,path)==null?'':getP(b,path))+'</textarea>';
       } else if(f.type === 'choice'){
-        h += '<div class="choice">';
+        h += '<div class="choice"'+(f.multi?' data-multi="1"':'')+'>';
         var opts = (f.editable ? types.slice() : (f.opts||[]).slice());
-        var cur = String(getP(b,path)==null?'':getP(b,path));
-        if(f.editable && cur && opts.indexOf(cur) === -1) opts.push(cur);
-        for(i=0;i<opts.length;i++){
-          h += '<button type="button" class="chip'+(cur===opts[i]?' on':'')+'" data-chip="'+path+'" data-v="'+esc(opts[i])+'">'+esc(opts[i])+'</button>';
+        var rawC = getP(b,path);
+        if(f.multi){
+          var curA = Array.isArray(rawC) ? rawC.slice() : (String(rawC==null?'':rawC).trim() ? [String(rawC)] : []);
+          if(f.editable) curA.forEach(function(x){ if(opts.indexOf(x) === -1) opts.push(x); });
+          for(i=0;i<opts.length;i++){
+            h += '<button type="button" class="chip'+(curA.indexOf(opts[i])!==-1?' on':'')+'" data-chip="'+path+'" data-v="'+esc(opts[i])+'">'+esc(opts[i])+'</button>';
+          }
+        } else {
+          var cur = String(rawC==null?'':rawC);
+          if(f.editable && cur && opts.indexOf(cur) === -1) opts.push(cur);
+          for(i=0;i<opts.length;i++){
+            h += '<button type="button" class="chip'+(cur===opts[i]?' on':'')+'" data-chip="'+path+'" data-v="'+esc(opts[i])+'">'+esc(opts[i])+'</button>';
+          }
         }
         h += '</div>';
       }
@@ -1162,7 +1171,7 @@
       return out3.length ? out3 : null;
     }
     var v = getP(b,path);
-    v = String(v==null?'':v).trim();
+    v = Array.isArray(v) ? v.join('、') : String(v==null?'':v).trim();
     if(!v) return null;
     if(f.type === 'choice') return ['  - ' + (f.label||'') + '：' + v];
     var lines = v.split('\n');
@@ -1685,10 +1694,18 @@
         return;
       }
 
-      /* 单选 chips */
+      /* 选项 chips（单选；父级带 data-multi 为多选） */
       el = t.closest('[data-chip]');
       if(el && b){
-        setP(b, el.getAttribute('data-chip'), el.getAttribute('data-v'));
+        var cpath = el.getAttribute('data-chip'), cval = el.getAttribute('data-v');
+        if(el.parentElement && el.parentElement.getAttribute('data-multi')){
+          var arrM = getP(b,cpath); arrM = Array.isArray(arrM) ? arrM.slice() : [];
+          var ixM = arrM.indexOf(cval);
+          if(ixM === -1) arrM.push(cval); else arrM.splice(ixM,1);
+          setP(b, cpath, arrM);
+        } else {
+          setP(b, cpath, cval);
+        }
         save(); rerenderStage();
         return;
       }

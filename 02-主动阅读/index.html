@@ -564,11 +564,13 @@
       } else if(f.type === 'long'){
         h += '<textarea data-k="' + f.k + '" placeholder="' + esc(f.ph || '') + '">' + esc(getVal(f.k)) + '</textarea>';
       } else if(f.type === 'choice'){
-        h += '<div class="choice" data-k="' + f.k + '">';
+        h += '<div class="choice" data-k="' + f.k + '"' + (f.multi ? ' data-multi="1"' : '') + '>';
         var opts = f.opts || [];
         var cur = getVal(f.k);
+        var curArr = f.multi ? (Array.isArray(cur) ? cur : (String(cur||'').trim() ? [String(cur)] : [])) : null;
         for(var i=0;i<opts.length;i++){
-          h += '<button type="button" class="chip' + (cur===opts[i]?' on':'') + '" data-v="' + esc(opts[i]) + '">' + esc(opts[i]) + '</button>';
+          var isOn = curArr ? curArr.indexOf(opts[i]) !== -1 : cur === opts[i];
+          h += '<button type="button" class="chip' + (isOn?' on':'') + '" data-v="' + esc(opts[i]) + '">' + esc(opts[i]) + '</button>';
         }
         h += '</div>';
       }
@@ -743,7 +745,8 @@
       }
       return out.length ? out : null;
     }
-    var v = String(getVal(f.k)).trim();
+    var rawv = getVal(f.k);
+    var v = Array.isArray(rawv) ? rawv.join('、') : String(rawv).trim();
     if(!v) return null;
     if(f.type === 'choice') return ['  - ' + f.label + '：' + v];
     var lines = v.split('\n');
@@ -983,9 +986,18 @@
       if(chip){
         var box = chip.closest('.choice'), k = box.getAttribute('data-k');
         if(k){
-          state.data[k] = chip.getAttribute('data-v');
-          var kids = box.querySelectorAll('.chip');
-          for(var i=0;i<kids.length;i++) kids[i].classList.toggle('on', kids[i] === chip);
+          var cval = chip.getAttribute('data-v');
+          if(box.getAttribute('data-multi')){
+            var arrM = Array.isArray(state.data[k]) ? state.data[k].slice() : [];
+            var ixM = arrM.indexOf(cval);
+            if(ixM === -1) arrM.push(cval); else arrM.splice(ixM,1);
+            state.data[k] = arrM;
+            chip.classList.toggle('on');
+          } else {
+            state.data[k] = cval;
+            var kids = box.querySelectorAll('.chip');
+            for(var i=0;i<kids.length;i++) kids[i].classList.toggle('on', kids[i] === chip);
+          }
           queueSave(); return;
         }
       }
